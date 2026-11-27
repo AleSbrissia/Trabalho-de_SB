@@ -3,14 +3,12 @@
 #include <stdint.h>
 #include <unistd.h>
 
-void *brk_original = 0, *brk_current = 0;
-/* Nome esperado pelo programa de testes em main.c. */
+void *brk_current = 0;
 void *original_brk = 0;
 char livre = 0, em_uso = 1;
 
 /*
- * Cada bloco da heap possui este cabeçalho. O campo tamanho representa
- * apenas a área de dados, não incluindo o próprio cabeçalho.
+ * tamanho se refere apenas aos dados 
  */
  // __attribute__((packed)) serve para impedir padding
 typedef struct __attribute__((packed)) {
@@ -36,11 +34,11 @@ static bloco_header *procura_bloco_livre(unsigned long int bytes, unsigned char 
   uintptr_t inicio, fim, atual;
   bloco_header *melhor = NULL;
 
-  if (bytes == 0 || strategy > 1 || brk_original == NULL ||
+  if (bytes == 0 || strategy > 1 || original_brk == NULL ||
       brk_current == NULL)
     return NULL;
 
-  inicio = (uintptr_t) brk_original;
+  inicio = (uintptr_t) original_brk;
   fim = (uintptr_t) brk_current;
 
   /* Ainda não há blocos registrados na heap. */
@@ -73,10 +71,6 @@ static bloco_header *procura_bloco_livre(unsigned long int bytes, unsigned char 
 
 /*
  * Abre um novo bloco no final da heap.
- *
- * O bloco recebe exatamente o tamanho solicitado. O endereço retornado
- * aponta para os dados, logo o cabeçalho fica escondido imediatamente antes
- * deles.
  */
 static void *abre_novo_bloco(unsigned long int bytes) {
   unsigned long int total;
@@ -105,20 +99,19 @@ static void *abre_novo_bloco(unsigned long int bytes) {
 
 //Obtém o endereço de brk
 void setup_brk(){
-  brk_original = sbrk(0);
-  original_brk = brk_original;
-  brk_current = brk_original;
+  original_brk = sbrk(0);
+  brk_current = original_brk;
 } 
 
 //Restaura o endereço de brk                
 void dismiss_brk(){
   brk_current = sbrk(0);
-  brk(brk_original);
+  brk(original_brk);
 } 
 
 // worst-fit (strategy = 0) e best-fit (strategy = 1)                    
 void* memory_alloc(unsigned long int bytes, unsigned char strategy){
-  if (bytes == 0)
+  if (bytes == 0 || strategy > 1)
     return NULL;
 
   //1. Procura bloco livre com tamanho igual ou maior que a
@@ -156,11 +149,11 @@ void* memory_alloc(unsigned long int bytes, unsigned char strategy){
 int memory_free(void *pointer){
   uintptr_t alvo, inicio, fim, atual;
 
-  if (pointer == NULL || brk_original == NULL || brk_current == NULL)
+  if (pointer == NULL || original_brk == NULL || brk_current == NULL)
     return 0;
 
   alvo = (uintptr_t) pointer;
-  inicio = (uintptr_t) brk_original;
+  inicio = (uintptr_t) original_brk;
   fim = (uintptr_t) brk_current;
   atual = inicio;
 
@@ -187,7 +180,7 @@ int memory_free(void *pointer){
     atual = proximo;
   }
 
-  /* O ponteiro não corresponde ao início de nenhum bloco alocado. */
+  /* O ponteiro não corresponde a nenhum bloco alocado. */
   return 0;
 }
 

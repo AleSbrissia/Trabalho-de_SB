@@ -1,23 +1,32 @@
 CC       := gcc
 CFLAGS   := -Wall -Wextra -g
-TARGET   := heap_test
-OBJECTS  := heap.o main.o
+TARGETS  := heap_test heap_test_implementado
+OBJECTS  := heap.o main.o main_implementado.o
 
-.PHONY: all run clean
+.PHONY: all run run-normal run-implementado clean
 
-all: $(TARGET)
+all: $(TARGETS)
 
-$(TARGET): $(OBJECTS)
+heap_test: heap.o main.o
+	$(CC) $(CFLAGS) $^ -o $@
+
+heap_test_implementado: heap.o main_implementado.o
 	$(CC) $(CFLAGS) $^ -o $@
 
 heap.o: heap.c heap.h
 main.o: main.c heap.h
+main_implementado.o: main_implementado.c heap.h
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-run: $(TARGET)
-	./$(TARGET)
+run: run-normal run-implementado
+
+run-normal: heap_test
+	./heap_test
+
+run-implementado: heap_test_implementado
+	./heap_test_implementado
 
 clean:
-	rm -f $(OBJECTS) $(TARGET)
+	rm -f $(OBJECTS) $(TARGETS)
